@@ -26,19 +26,34 @@ class SFTTrainer(Trainer):
     def train(self):
 
         step = self.load_ckpt((self.actor,))
+
+        # Optional: limit the number of batches per epoch for faster iterations
+        steps_per_epoch_cfg = getattr(self.config.trainer, "steps_per_epoch", None)
+
         for epoch in range(
             step // len(self.train_dataloader),
             self.config.trainer.n_epochs
         ):
+            total_batches = len(self.train_dataloader)
+            steps_per_epoch = (
+                min(steps_per_epoch_cfg, total_batches)
+                if steps_per_epoch_cfg is not None else total_batches
+            )
+
+            batches_processed = 0
             for tensor_dict in tqdm(
                 self.train_dataloader,
                 desc=f"Epoch {epoch + 1}",
                 disable=(dist.get_rank() != 0),
-                initial=step % len(self.train_dataloader)
+                total=steps_per_epoch,
+                initial=step % steps_per_epoch
             ):
                 step += 1
+                batches_processed += 1
                 self.actor.sft_update(tensor_dict, step)
                 self.save_ckpt((self.actor,), step)
+                if batches_processed >= steps_per_epoch:
+                    break
         self.save_model((self.actor,))
 
 

@@ -15,6 +15,9 @@ trainer:
   experiment_name: null
   load_ckpt_from: null
   n_epochs: 1
+  # Optional: cap number of batches processed per epoch
+  # Set to an integer to train on a subset each epoch; null means full epoch.
+  steps_per_epoch: null
   save_dir: ckpts/${trainer.experiment_name}
   save_freq: null
   use_wandb: true
